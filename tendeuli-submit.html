@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>내 캠핑 올리기 — 텐들이 | TENTRIOR 텐트리어</title>
+  <meta name="description" content="내가 꾸민 텐트와 캠핑 세팅을 텐들이에 올려보세요. 로그인 후 사진과 이야기를 남기면 검토 후 게시돼요.">
+  <meta name="theme-color" content="#22402F">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="tendeuli-submit">
+  <div id="header"></div>
+
+  <main id="app">
+    <section class="page-head"><div class="container">
+      <div class="breadcrumb"><a href="tendeuli.html">텐들이</a> / 내 캠핑 올리기</div>
+      <p class="eyebrow">Tendeuli</p><h1>내 캠핑 올리기</h1>
+      <p>텐트와 세팅 사진, 사용한 아이템을 알려주세요. 텐트리어가 확인한 뒤 텐들이에 게시해드려요.</p>
+    </div></section>
+
+    <section class="section" style="padding-top:0"><div class="container">
+
+      <div id="gate" class="gate-box" hidden>
+        <p class="eyebrow">로그인이 필요해요</p>
+        <h2>로그인하고 시작하기</h2>
+        <p class="muted" style="margin:0 0 24px">텐들이는 회원만 올릴 수 있어요. 계정이 없다면 회원가입도 함께 할 수 있어요.</p>
+        <button type="button" class="btn accent" id="gate-login">로그인 · 회원가입</button>
+      </div>
+
+      <div id="notready" class="gate-box" hidden>
+        <p class="eyebrow">준비 중</p>
+        <h2>로그인 기능이 아직 준비되지 않았어요</h2>
+        <p class="muted" style="margin:0">운영자 안내: <code>data/supabase-config.js</code> 에 Supabase 값을 채워주세요. 방법은 <code>SUPABASE_SETUP.md</code> 를 확인하세요.</p>
+      </div>
+
+      <form id="submit-form" class="form-card" hidden novalidate>
+        <div class="form-grid">
+          <div class="field-group">
+            <label>제목<input type="text" name="postTitle" required maxlength="60" placeholder="예: 벨텐트 안을 거실처럼 꾸민 가을 집들이"></label>
+          </div>
+          <div class="g2">
+            <div class="field-group"><label>텐트<input type="text" name="tent" required placeholder="예: 폴리코튼 벨텐트 5m"></label></div>
+            <div class="field-group"><label>가까운 스타일<select name="styleId" id="style-select"></select></label></div>
+          </div>
+          <div class="g2">
+            <div class="field-group"><label>계절<select name="season">
+              <option value="봄">봄</option><option value="여름">여름</option><option value="가을" selected>가을</option><option value="겨울">겨울</option>
+            </select></label></div>
+            <div class="field-group"><label>인원<input type="text" name="people" placeholder="예: 2인, 가족"></label></div>
+          </div>
+          <div class="field-group"><label>지역<input type="text" name="place" placeholder="예: 경기 · 양평"></label></div>
+          <div class="field-group"><label>소개<textarea name="intro" required maxlength="500" placeholder="어떻게 꾸몄는지 자유롭게 적어주세요."></textarea></label></div>
+          <div class="field-group"><label>스타일링 포인트 (선택)<textarea name="point" maxlength="200" placeholder="가장 자신 있는 팁 한 가지"></textarea></label></div>
+
+          <div class="field-group">
+            <label>사용한 아이템 (선택)</label>
+            <div class="item-rows" id="item-rows"></div>
+            <button type="button" class="add-row" id="add-item">+ 아이템 추가</button>
+          </div>
+
+          <div class="field-group file-drop">
+            <label>대표 사진<input type="file" id="photo-input" accept="image/*" required></label>
+            <div class="file-preview" id="photo-preview">사진을 선택해주세요</div>
+          </div>
+
+          <label class="consent-row"><input type="checkbox" id="consent" required> 사진과 글을 텐들이에 게시하는 것에 동의합니다. 검토 후 게시되며, 텐트리어 스타일에 맞지 않으면 게시되지 않을 수 있어요.</label>
+
+          <button type="submit" class="btn accent" id="submit-btn">제출하기</button>
+          <p class="auth-msg" id="submit-msg" aria-live="polite"></p>
+        </div>
+      </form>
+
+      <div id="done" class="gate-box" hidden>
+        <p class="eyebrow">제출 완료</p>
+        <h2>고마워요! 검토 후 게시할게요</h2>
+        <p class="muted" style="margin:0 0 24px">텐트리어 부부가 확인하는 대로 텐들이에서 만나보실 수 있어요.</p>
+        <a class="btn line" href="tendeuli.html">텐들이로 돌아가기</a>
+      </div>
+
+    </div></section>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="data/site.js"></script>
+  <script src="data/styles.js"></script>
+  <script src="data/products.js"></script>
+  <script src="data/tents.js"></script>
+  <script src="data/setups.js"></script>
+  <script src="data/journal.js"></script>
+  <script src="data/tendeuli.js"></script>
+  <script src="data/camperjournal.js"></script>
+  <script src="data/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data/banned-nicknames.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      function $(sel, el) { return (el || document).querySelector(sel); }
+
+      function ready(fn) {
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+      }
+
+      ready(function () {
+        var T = window.TENTRIOR || {};
+
+        // 스타일 선택지 채우기
+        var styleSel = $('#style-select');
+        (T.styles || []).forEach(function (st) {
+          var o = document.createElement('option');
+          o.value = st.id; o.textContent = st.name + ' · ' + st.ko;
+          styleSel.appendChild(o);
+        });
+
+        // 아이템 행 (이름 + 제품 DB 연결 선택)
+        var productOptions = (T.products || []).map(function (p) {
+          return { id: p.id, label: '[' + p.category + '] ' + p.name };
+        });
+        var rows = $('#item-rows');
+        function addRow(name, product) {
+          var row = document.createElement('div');
+          row.className = 'item-row';
+          var opts = '<option value="">(제품 DB에 없는 아이템)</option>' + productOptions.map(function (p) {
+            return '<option value="' + p.id + '"' + (p.id === product ? ' selected' : '') + '>' + p.label + '</option>';
+          }).join('');
+          row.innerHTML =
+            '<input type="text" class="item-name" placeholder="아이템 이름 (예: 우드 롤테이블)">' +
+            '<select class="item-product">' + opts + '</select>' +
+            '<button type="button" class="remove-row" aria-label="이 아이템 삭제">×</button>';
+          if (name) row.querySelector('.item-name').value = name;
+          row.querySelector('.remove-row').addEventListener('click', function () { row.remove(); });
+          rows.appendChild(row);
+        }
+        addRow(); addRow(); addRow();
+        $('#add-item').addEventListener('click', function () { addRow(); });
+
+        // 사진 미리보기
+        var photoInput = $('#photo-input');
+        var preview = $('#photo-preview');
+        var photoFile = null;
+        photoInput.addEventListener('change', function (e) {
+          photoFile = e.target.files[0] || null;
+          if (photoFile) {
+            preview.innerHTML = '<img alt="선택한 사진 미리보기">';
+            preview.querySelector('img').src = URL.createObjectURL(photoFile);
+          } else {
+            preview.textContent = '사진을 선택해주세요';
+          }
+        });
+
+        // 로그인 상태에 따라 화면 전환
+        var gate = $('#gate'), notReady = $('#notready'), form = $('#submit-form'), done = $('#done');
+        function showState() {
+          var auth = T.auth;
+          [gate, notReady, form, done].forEach(function (el) { el.hidden = true; });
+          if (!auth || !auth.ready) { notReady.hidden = false; return; }
+          if (auth.user) { form.hidden = false; } else { gate.hidden = false; }
+        }
+        showState();
+        document.addEventListener('tentrior:auth', showState);
+
+        var gateBtn = $('#gate-login');
+        if (gateBtn) gateBtn.addEventListener('click', function () { T.auth.openModal('signin'); });
+
+        // 제출
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var auth = T.auth;
+          if (!auth || !auth.user) { showState(); return; }
+
+          var msg = $('#submit-msg');
+          var btn = $('#submit-btn');
+          msg.textContent = '';
+
+          var title = form.postTitle.value.trim();
+          var intro = form.intro.value.trim();
+          if (!title || !intro || !photoFile || !$('#consent').checked) {
+            msg.textContent = '필수 항목(제목, 소개, 사진, 동의)을 확인해주세요.';
+            return;
+          }
+
+          var items = Array.prototype.slice.call(rows.querySelectorAll('.item-row')).map(function (row) {
+            var name = row.querySelector('.item-name').value.trim();
+            var product = row.querySelector('.item-product').value;
+            if (!name) return null;
+            return product ? { name: name, product: product } : { name: name };
+          }).filter(Boolean);
+
+          btn.disabled = true;
+
+          var ext = (photoFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+          var path = auth.user.id + '/' + Date.now() + '.' + ext;
+
+          auth.client.storage.from('tendeuli-photos').upload(path, photoFile, { upsert: false })
+            .then(function (up) {
+              if (up.error) throw up.error;
+              var nickname = auth.nickname || (auth.user.email ? auth.user.email.split('@')[0] : '캠퍼');
+              return auth.client.from('tendeuli_posts').insert({
+                user_id: auth.user.id, nickname: nickname, title: title,
+                tent: form.tent.value.trim(), style: form.styleId.value, season: form.season.value,
+                people: form.people.value.trim(), place: form.place.value.trim(),
+                intro: intro, point: form.point.value.trim(), items: items,
+                image_path: path, status: 'pending'
+              });
+            })
+            .then(function (ins) {
+              if (ins.error) throw ins.error;
+              form.hidden = true;
+              done.hidden = false;
+            })
+            .catch(function (err) {
+              msg.textContent = (err && err.message) || '제출 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.';
+            })
+            .finally(function () { btn.disabled = false; });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
+
