@@ -292,7 +292,7 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
       const terms = q.split(/\s+/);
       const hits = index.filter((it) => terms.every((t) => it.text.includes(t)));
       if (!hits.length) {
-        out.innerHTML = `<p class="search-empty">'${esc(input.value.trim())}'에 맞는 결과가 없어요. 다른 단어로 찾아보세요.</p>${suggestHTML()}`;
+        out.innerHTML = `<p class="search-empty">‘${esc(input.value.trim())}’에 맞는 결과가 없어요. 다른 단어로 찾아보세요.</p>${suggestHTML()}`;
         return;
       }
       const GROUP_LABEL = { SETUP: 'SETUP', TENDEULI: '텐들이', CAMPERJOURNAL: '캠퍼저널', ITEM: 'ITEM', GUIDE: 'GUIDE', STYLE: 'STYLE', WEEKEND: 'WEEKEND' };
