@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>관리자 페이지 | TENTRIOR 텐트리어</title>
+  <meta name="description" content="텐들이 승인·반려, 댓글 관리를 위한 관리자 전용 페이지예요.">
+  <meta name="theme-color" content="#22402F">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="admin">
+  <div id="header"></div>
+
+  <main id="app">
+    <section class="page-head"><div class="container">
+      <div class="breadcrumb">관리자 페이지</div>
+      <p class="eyebrow">Admin</p><h1>관리자 페이지</h1>
+      <p>텐들이 승인·반려와 댓글 관리를 여기서 바로 할 수 있어요.</p>
+    </div></section>
+
+    <section class="section" style="padding-top:0"><div class="container">
+
+      <div id="gate" class="gate-box" hidden>
+        <p class="eyebrow">로그인이 필요해요</p>
+        <h2>로그인하고 확인하기</h2>
+        <p class="muted" style="margin:0 0 24px">관리자 페이지는 로그인한 관리자만 볼 수 있어요.</p>
+        <button type="button" class="btn accent" id="gate-login">로그인 · 회원가입</button>
+      </div>
+
+      <div id="notready" class="gate-box" hidden>
+        <p class="eyebrow">준비 중</p>
+        <h2>로그인 기능이 아직 준비되지 않았어요</h2>
+        <p class="muted" style="margin:0">운영자 안내: <code>data/supabase-config.js</code> 에 Supabase 값을 채워주세요.</p>
+      </div>
+
+      <div id="noaccess" class="gate-box" hidden>
+        <p class="eyebrow">접근 권한 없음</p>
+        <h2>관리자 권한이 없어요</h2>
+        <p class="muted" style="margin:0">이 계정은 관리자로 지정되어 있지 않아요.</p>
+      </div>
+
+      <div id="content" hidden>
+        <h2 style="margin-top:0">승인 대기 중인 텐들이</h2>
+        <ul class="my-post-list" id="admin-posts"></ul>
+
+        <h2 style="margin-top:56px">전체 댓글 관리</h2>
+        <ul class="comment-list" id="admin-comments"></ul>
+      </div>
+
+    </div></section>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="data/site.js"></script>
+  <script src="data/styles.js"></script>
+  <script src="data/products.js"></script>
+  <script src="data/tents.js"></script>
+  <script src="data/setups.js"></script>
+  <script src="data/journal.js"></script>
+  <script src="data/tendeuli.js"></script>
+  <script src="data/camperjournal.js"></script>
+  <script src="data/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data/banned-nicknames.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      function $(sel, el) { return (el || document).querySelector(sel); }
+      function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+      function ready(fn) {
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+      }
+
+      ready(function () {
+        var T = window.TENTRIOR || {};
+        var gate = $('#gate'), notReady = $('#notready'), noAccess = $('#noaccess'), content = $('#content');
+        var loadedFor = null;
+
+        function showState() {
+          var auth = T.auth;
+          [gate, notReady, noAccess, content].forEach(function (el) { el.hidden = true; });
+          if (!auth || !auth.ready) { notReady.hidden = false; return; }
+          if (!auth.user) { gate.hidden = false; return; }
+          if (!auth.isAdmin) { noAccess.hidden = false; return; }
+          content.hidden = false;
+          if (loadedFor !== auth.user.id) { loadedFor = auth.user.id; loadPendingPosts(); loadAllComments(); }
+        }
+        showState();
+        document.addEventListener('tentrior:auth', showState);
+
+        var gateBtn = $('#gate-login');
+        if (gateBtn) gateBtn.addEventListener('click', function () { T.auth.openModal('signin'); });
+
+        /* ---------- 텐들이 승인/반려 ---------- */
+        function loadPendingPosts() {
+          var auth = T.auth;
+          var listEl = $('#admin-posts');
+          listEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          auth.client.from('tendeuli_posts').select('id,title,nickname,intro,created_at,status')
+            .eq('status', 'pending').order('created_at', { ascending: true })
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                listEl.innerHTML = '<p class="muted">대기 중인 글이 없어요.</p>';
+                return;
+              }
+              listEl.innerHTML = data.map(function (row) {
+                var date = (row.created_at || '').slice(0, 10);
+                return '<li class="admin-post-card" data-id="' + esc(row.id) + '">' +
+                  '<div class="admin-post-head"><strong>' + esc(row.title) + '</strong><span class="muted small">' + esc(row.nickname) + ' · ' + esc(date) + '</span></div>' +
+                  '<p class="muted" style="margin:0">' + esc(row.intro || '') + '</p>' +
+                  '<div class="admin-post-actions">' +
+                    '<a href="tendeuli.html?id=' + encodeURIComponent(row.id) + '" target="_blank" rel="noopener">미리보기 ↗</a>' +
+                    '<button type="button" class="btn accent approve-btn">게시하기</button>' +
+                    '<button type="button" class="btn line reject-btn">반려하기</button>' +
+                  '</div>' +
+                '</li>';
+              }).join('');
+            });
+        }
+
+        $('#admin-posts').addEventListener('click', function (e) {
+          var approveBtn = e.target.closest('.approve-btn');
+          var rejectBtn = e.target.closest('.reject-btn');
+          if (!approveBtn && !rejectBtn) return;
+          var card = e.target.closest('.admin-post-card');
+          var id = card && card.dataset.id;
+          if (!id) return;
+          var newStatus = approveBtn ? 'published' : 'rejected';
+          (approveBtn || rejectBtn).disabled = true;
+          T.auth.client.from('tendeuli_posts').update({ status: newStatus }).eq('id', id)
+            .then(function (res) { if (!res.error) loadPendingPosts(); });
+        });
+
+        /* ---------- 댓글 관리 ---------- */
+        function loadAllComments() {
+          var auth = T.auth;
+          var listEl = $('#admin-comments');
+          listEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          auth.client.from('tendeuli_comments').select('id,nickname,body,created_at,post_id,tendeuli_posts(title)')
+            .order('created_at', { ascending: false }).limit(50)
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                listEl.innerHTML = '<p class="muted">댓글이 없어요.</p>';
+                return;
+              }
+              listEl.innerHTML = data.map(function (row) {
+                var postTitle = (row.tendeuli_posts && row.tendeuli_posts.title) || '삭제된 글';
+                var date = (row.created_at || '').slice(0, 10);
+                return '<li class="comment-item" data-id="' + esc(row.id) + '">' +
+                  '<div class="comment-head"><strong>' + esc(row.nickname) + '</strong><span class="muted small">' + esc(postTitle) + ' · ' + esc(date) + '</span></div>' +
+                  '<p class="comment-body">' + esc(row.body) + '</p>' +
+                  '<button type="button" class="comment-delete">삭제</button>' +
+                '</li>';
+              }).join('');
+            });
+        }
+
+        $('#admin-comments').addEventListener('click', function (e) {
+          var btn = e.target.closest('.comment-delete');
+          if (!btn) return;
+          var li = btn.closest('.comment-item');
+          var id = li && li.dataset.id;
+          if (!id) return;
+          btn.disabled = true;
+          T.auth.client.from('tendeuli_comments').delete().eq('id', id)
+            .then(function (res) { if (!res.error) loadAllComments(); });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
+
