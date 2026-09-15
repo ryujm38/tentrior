@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>내 정보 보기 | TENTRIOR 텐트리어</title>
+  <meta name="description" content="닉네임과 이메일을 확인하고, 비밀번호를 변경하고, 내가 텐들이에 올린 글의 진행 상태를 볼 수 있어요.">
+  <meta name="theme-color" content="#22402F">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="mypage">
+  <div id="header"></div>
+
+  <main id="app">
+    <section class="page-head"><div class="container">
+      <div class="breadcrumb">내 정보 보기</div>
+      <p class="eyebrow">My Page</p><h1>내 정보 보기</h1>
+      <p>닉네임과 이메일을 확인하고, 비밀번호를 변경하고, 내가 텐들이에 올린 글의 진행 상태를 볼 수 있어요.</p>
+    </div></section>
+
+    <section class="section" style="padding-top:0"><div class="container">
+
+      <div id="gate" class="gate-box" hidden>
+        <p class="eyebrow">로그인이 필요해요</p>
+        <h2>로그인하고 확인하기</h2>
+        <p class="muted" style="margin:0 0 24px">내 정보는 로그인한 회원만 볼 수 있어요.</p>
+        <button type="button" class="btn accent" id="gate-login">로그인 · 회원가입</button>
+      </div>
+
+      <div id="notready" class="gate-box" hidden>
+        <p class="eyebrow">준비 중</p>
+        <h2>로그인 기능이 아직 준비되지 않았어요</h2>
+        <p class="muted" style="margin:0">운영자 안내: <code>data/supabase-config.js</code> 에 Supabase 값을 채워주세요.</p>
+      </div>
+
+      <div id="content" hidden>
+        <div class="form-card" style="max-width:480px">
+          <div class="field-group">
+            <label>이메일</label>
+            <p class="static-value" id="my-email"></p>
+          </div>
+          <div class="field-group">
+            <label>닉네임</label>
+            <p class="static-value" id="my-nickname"></p>
+          </div>
+          <p class="muted small" style="margin:0">닉네임은 한 번 정하면 바꿀 수 없어요.</p>
+        </div>
+
+        <div class="form-card" style="max-width:480px; margin-top:24px">
+          <h2 style="margin-top:0">비밀번호 변경</h2>
+          <p class="muted" style="margin:0 0 20px">본인 확인을 위해 이메일로 인증코드를 받은 뒤 새 비밀번호를 설정할 수 있어요.</p>
+
+          <div id="pw-step-request">
+            <button type="button" class="btn accent" id="pw-request-btn">인증코드 받기</button>
+            <p class="field-msg" id="pw-request-msg" aria-live="polite"></p>
+          </div>
+
+          <div id="pw-step-verify" hidden>
+            <div class="field-group">
+              <label>인증코드
+                <span class="input-with-btn">
+                  <input type="text" id="pw-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="숫자 8자리">
+                  <button type="button" class="btn small" id="pw-code-verify-btn">인증확인</button>
+                </span>
+              </label>
+              <p class="field-msg" id="pw-code-msg" aria-live="polite"></p>
+              <button type="button" class="auth-forgot" id="pw-code-resend">인증코드 다시 받기</button>
+            </div>
+          </div>
+
+          <div id="pw-step-change" hidden>
+            <div class="field-group">
+              <label>새 비밀번호<input type="password" id="pw-new" autocomplete="new-password" placeholder="영문+숫자 조합 8자 이상"></label>
+              <p class="field-msg" id="pw-new-msg" aria-live="polite"></p>
+            </div>
+            <div class="field-group">
+              <label>새 비밀번호 확인<input type="password" id="pw-new2" autocomplete="new-password"></label>
+              <p class="field-msg" id="pw-confirm-msg" aria-live="polite"></p>
+            </div>
+            <button type="button" class="btn accent" id="pw-save-btn" disabled>비밀번호 변경하기</button>
+            <p class="field-msg" id="pw-save-msg" aria-live="polite"></p>
+          </div>
+        </div>
+
+        <h2 style="margin-top:56px">내가 올린 텐들이</h2>
+        <ul class="my-post-list" id="my-posts"></ul>
+
+        <h2 style="margin-top:56px">내가 쓴 댓글</h2>
+        <ul class="my-post-list" id="my-comments"></ul>
+      </div>
+
+    </div></section>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="data/site.js"></script>
+  <script src="data/styles.js"></script>
+  <script src="data/products.js"></script>
+  <script src="data/tents.js"></script>
+  <script src="data/setups.js"></script>
+  <script src="data/journal.js"></script>
+  <script src="data/tendeuli.js"></script>
+  <script src="data/camperjournal.js"></script>
+  <script src="data/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data/banned-nicknames.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      function $(sel, el) { return (el || document).querySelector(sel); }
+      function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+      function ready(fn) {
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+      }
+
+      ready(function () {
+        var T = window.TENTRIOR || {};
+        var gate = $('#gate'), notReady = $('#notready'), content = $('#content');
+        var STATUS_LABEL = { pending: '검토 중', published: '게시됨', rejected: '반려됨' };
+
+        function showState() {
+          var auth = T.auth;
+          [gate, notReady, content].forEach(function (el) { el.hidden = true; });
+          if (!auth || !auth.ready) { notReady.hidden = false; return; }
+          if (!auth.user) { gate.hidden = false; return; }
+          content.hidden = false;
+          loadInfo();
+        }
+        showState();
+        document.addEventListener('tentrior:auth', showState);
+
+        var gateBtn = $('#gate-login');
+        if (gateBtn) gateBtn.addEventListener('click', function () { T.auth.openModal('signin'); });
+
+        var postsLoadedFor = null;
+        function loadInfo() {
+          var auth = T.auth;
+          $('#my-email').textContent = auth.user.email || '';
+          $('#my-nickname').textContent = auth.nickname || '';
+          if (postsLoadedFor !== auth.user.id) { postsLoadedFor = auth.user.id; loadPosts(); loadComments(); }
+        }
+
+        function loadPosts() {
+          var auth = T.auth;
+          var listEl = $('#my-posts');
+          listEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          auth.client.from('tendeuli_posts').select('id,title,status,created_at')
+            .eq('user_id', auth.user.id).order('created_at', { ascending: false })
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                listEl.innerHTML = '<p class="muted">아직 올린 캠핑이 없어요. <a href="tendeuli.html">텐들이에서 올려보기</a></p>';
+                return;
+              }
+              listEl.innerHTML = data.map(function (row) {
+                var badge = '<span class="status-badge ' + esc(row.status) + '">' + esc(STATUS_LABEL[row.status] || row.status) + '</span>';
+                var date = (row.created_at || '').slice(0, 10);
+                var titleHtml = row.status === 'published'
+                  ? '<a href="tendeuli.html?id=' + encodeURIComponent(row.id) + '">' + esc(row.title) + '</a>'
+                  : '<span>' + esc(row.title) + '</span>';
+                return '<li class="my-post-row">' + titleHtml + badge + '<span class="muted small">' + esc(date) + '</span></li>';
+              }).join('');
+            });
+        }
+
+        function loadComments() {
+          var auth = T.auth;
+          var listEl = $('#my-comments');
+          listEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          auth.client.from('tendeuli_comments').select('id,body,created_at,post_id,tendeuli_posts(title)')
+            .eq('user_id', auth.user.id).order('created_at', { ascending: false })
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                listEl.innerHTML = '<p class="muted">아직 쓴 댓글이 없어요.</p>';
+                return;
+              }
+              listEl.innerHTML = data.map(function (row) {
+                var postTitle = (row.tendeuli_posts && row.tendeuli_posts.title) || '삭제된 글';
+                var date = (row.created_at || '').slice(0, 10);
+                var link = '<a href="tendeuli.html?id=' + encodeURIComponent(row.post_id) + '">' + esc(postTitle) + '</a>';
+                return '<li class="my-post-row"><span>' + link + ' — ' + esc(row.body) + '</span><span class="muted small">' + esc(date) + '</span></li>';
+              }).join('');
+            });
+        }
+
+        /* ---------- 비밀번호 변경 (이메일 재인증 후) ---------- */
+        var PW_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+        var pwStepRequest = $('#pw-step-request'), pwStepVerify = $('#pw-step-verify'), pwStepChange = $('#pw-step-change');
+        var pwRequestBtn = $('#pw-request-btn'), pwRequestMsg = $('#pw-request-msg');
+        var pwCodeInput = $('#pw-code'), pwCodeVerifyBtn = $('#pw-code-verify-btn'), pwCodeMsg = $('#pw-code-msg'), pwCodeResend = $('#pw-code-resend');
+        var pwNewInput = $('#pw-new'), pwNew2Input = $('#pw-new2'), pwNewMsg = $('#pw-new-msg'), pwConfirmMsg = $('#pw-confirm-msg');
+        var pwSaveBtn = $('#pw-save-btn'), pwSaveMsg = $('#pw-save-msg');
+
+        pwRequestBtn.addEventListener('click', function () {
+          var auth = T.auth;
+          pwRequestBtn.disabled = true;
+          pwRequestMsg.textContent = '';
+          auth.client.auth.signInWithOtp({ email: auth.user.email }).then(function (res) {
+            if (res.error) throw res.error;
+            pwStepRequest.hidden = true;
+            pwStepVerify.hidden = false;
+            pwCodeInput.value = '';
+            pwCodeInput.focus();
+          }).catch(function (err) {
+            pwRequestMsg.textContent = (err && err.message) || '인증코드 발송에 실패했어요.';
+            pwRequestMsg.className = 'field-msg bad';
+            pwRequestBtn.disabled = false;
+          });
+        });
+
+        pwCodeVerifyBtn.addEventListener('click', function () {
+          var auth = T.auth;
+          var code = pwCodeInput.value.trim();
+          if (!code) { pwCodeMsg.textContent = '인증코드를 입력해주세요.'; pwCodeMsg.className = 'field-msg bad'; return; }
+          pwCodeVerifyBtn.disabled = true;
+          pwCodeMsg.textContent = '';
+          auth.client.auth.verifyOtp({ email: auth.user.email, token: code, type: 'email' }).then(function (res) {
+            if (res.error) throw res.error;
+            pwStepVerify.hidden = true;
+            pwStepChange.hidden = false;
+          }).catch(function (err) {
+            pwCodeMsg.textContent = (err && err.message) || '인증코드가 올바르지 않아요.';
+            pwCodeMsg.className = 'field-msg bad';
+            pwCodeVerifyBtn.disabled = false;
+          });
+        });
+
+        pwCodeResend.addEventListener('click', function () {
+          var auth = T.auth;
+          pwCodeResend.disabled = true;
+          pwCodeMsg.textContent = '';
+          auth.client.auth.signInWithOtp({ email: auth.user.email }).then(function (res) {
+            if (res.error) throw res.error;
+            pwCodeMsg.textContent = '인증코드를 다시 보냈어요.'; pwCodeMsg.className = 'field-msg good';
+          }).catch(function (err) {
+            pwCodeMsg.textContent = (err && err.message) || '재전송에 실패했어요.'; pwCodeMsg.className = 'field-msg bad';
+          }).finally(function () {
+            setTimeout(function () { pwCodeResend.disabled = false; }, 15000);
+          });
+        });
+
+        function checkPwFields() {
+          var v = pwNewInput.value, v2 = pwNew2Input.value;
+          var formatOk;
+          if (!v) { pwNewMsg.textContent = ''; pwNewMsg.className = 'field-msg'; formatOk = false; }
+          else if (PW_RE.test(v)) { pwNewMsg.textContent = '사용할 수 있는 비밀번호예요.'; pwNewMsg.className = 'field-msg good'; formatOk = true; }
+          else { pwNewMsg.textContent = '영문+숫자를 조합해서 8자 이상 입력해주세요.'; pwNewMsg.className = 'field-msg bad'; formatOk = false; }
+
+          var matchOk;
+          if (!v2) { pwConfirmMsg.textContent = ''; pwConfirmMsg.className = 'field-msg'; matchOk = false; }
+          else if (v2 === v) { pwConfirmMsg.textContent = '비밀번호가 일치해요.'; pwConfirmMsg.className = 'field-msg good'; matchOk = true; }
+          else { pwConfirmMsg.textContent = '비밀번호가 일치하지 않아요.'; pwConfirmMsg.className = 'field-msg bad'; matchOk = false; }
+
+          pwSaveBtn.disabled = !(formatOk && matchOk);
+        }
+        pwNewInput.addEventListener('input', checkPwFields);
+        pwNew2Input.addEventListener('input', checkPwFields);
+
+        pwSaveBtn.addEventListener('click', function () {
+          if (pwSaveBtn.disabled) return;
+          var auth = T.auth;
+          pwSaveBtn.disabled = true;
+          pwSaveMsg.textContent = '';
+          auth.client.auth.updateUser({ password: pwNewInput.value }).then(function (res) {
+            if (res.error) throw res.error;
+            pwSaveMsg.textContent = '비밀번호를 변경했어요.'; pwSaveMsg.className = 'field-msg good';
+            pwNewInput.value = ''; pwNew2Input.value = '';
+            pwNewMsg.textContent = ''; pwConfirmMsg.textContent = '';
+            pwStepChange.hidden = true;
+            pwStepRequest.hidden = false;
+            pwRequestBtn.disabled = false;
+          }).catch(function (err) {
+            pwSaveMsg.textContent = (err && err.message) || '비밀번호 변경에 실패했어요.'; pwSaveMsg.className = 'field-msg bad';
+            pwSaveBtn.disabled = false;
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
+
