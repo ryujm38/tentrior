@@ -288,6 +288,94 @@ create policy "관리자만 광고 이미지를 지울 수 있음"
 
 ---
 
+## 7단계 — 텐트리어 세팅(대문 슬라이드 포함) 관리 연결하기
+
+관리자 페이지에서 "텐트리어 세팅"(사진 속 아이템을 소개하는 대표 콘텐츠, 메인 대문 슬라이드도 여기서 나와요)을 등록·수정·삭제하려면 표 1개와 저장 공간 1개가 더 필요해요. **SQL Editor** → **New query** 에서 아래를 실행하세요.
+
+```sql
+-- 텐트리어 세팅 표
+create table public.setups (
+  id text primary key default gen_random_uuid()::text,
+  featured boolean not null default false,
+  setup_date date not null default current_date,
+  title text not null,
+  subtitle text,
+  style text,
+  tent text,
+  people text,
+  season text,
+  image_path text,
+  summary text,
+  story jsonb not null default '[]'::jsonb,
+  tips jsonb not null default '[]'::jsonb,
+  items jsonb not null default '[]'::jsonb,
+  budget jsonb,
+  hero jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.setups enable row level security;
+
+create policy "세팅은 누구나 볼 수 있음"
+  on public.setups for select
+  using (true);
+
+create policy "관리자만 세팅을 등록 가능"
+  on public.setups for insert
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 세팅을 수정 가능"
+  on public.setups for update
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 세팅을 삭제 가능"
+  on public.setups for delete
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+```
+
+그다음 **Storage** → **New bucket** 으로 사진 저장 공간을 만드세요.
+
+1. 이름: `setup-images`
+2. **Public bucket** 체크박스 **켜기**
+3. **Create bucket**
+
+다시 **SQL Editor** 에서 접근 규칙을 추가하세요.
+
+```sql
+create policy "세팅 사진은 누구나 볼 수 있음"
+  on storage.objects for select
+  using (bucket_id = 'setup-images');
+
+create policy "관리자만 세팅 사진을 올릴 수 있음"
+  on storage.objects for insert
+  with check (bucket_id = 'setup-images' and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 세팅 사진을 지울 수 있음"
+  on storage.objects for delete
+  using (bucket_id = 'setup-images' and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+```
+
+### 지금 있는 샘플 세팅(6개)을 표로 옮기기
+
+지금 사이트에 보이는 샘플 세팅 6개(`data/setups.js`)를 표에 그대로 넣어두는 SQL이에요. 이렇게 하면 관리자 페이지에서 바로 이 샘플들을 수정하거나 지울 수 있어요. **한 번만 실행**하세요.
+
+```sql
+insert into public.setups (id, featured, setup_date, title, subtitle, style, tent, people, season, summary, story, tips, items, budget, hero) values
+('001', true, '2026-09-12', 'Warm Wood Camping', '티피텐트를 따뜻한 우드톤으로 채운 가을 2인 캠핑', 'midcentury', 'tent-tc-tipi', '2인', '가을', '샌드 컬러 티피에 원목 IGT 테이블과 캔버스 체어를 더해, 해가 지고 나서 더 예뻐지는 우드 캠핑 세팅이에요.', '["가을 캠핑은 해가 빨리 지기 때문에, 이번 세팅은 처음부터 “밤에 예쁜 공간”을 목표로 잡았어요. 조명은 오일 랜턴 하나와 우드 쉐이드를 씌운 LED 랜턴 하나, 딱 두 개만 썼어요.","우드 톤은 오크 계열로 맞추고, 레드 체크 블랭킷 하나로만 컬러 포인트를 줬어요. 러그는 일부러 밝은 베이지로 깔아서 진한 우드 가구가 무거워 보이지 않게 했어요."]'::jsonb, '["우드 톤은 한 가지 계열(오크 or 월넛)로 통일하기","컬러 포인트는 블랭킷 하나로 충분해요","수납은 오픈 쉘프에 “보여줘도 되는 것”만"]'::jsonb, '[{"product":"p-tent-tc-tipi","x":24,"y":52},{"product":"p-lantern-oil","x":53,"y":40},{"product":"p-lantern-shade","x":72,"y":28},{"product":"p-table-igt","x":70,"y":66},{"product":"p-kitchen-wood","x":58,"y":58},{"product":"p-chair-canvas","qty":2,"x":86,"y":47},{"product":"p-fabric-blanket","x":82,"y":72},{"product":"p-rug-beige","x":38,"y":88},{"product":"p-storage-shelf","x":16,"y":80}]'::jsonb, '{"note":"텐트와 러그는 그대로, 가구와 조명을 가성비 제품으로 바꿔 비슷한 분위기를 만들었어요.","items":[{"product":"p-tent-tc-tipi"},{"product":"p-lantern-led"},{"product":"p-lantern-shade"},{"product":"p-table-roll"},{"product":"p-chair-wood-basic","qty":2},{"product":"p-rug-beige"},{"product":"p-storage-box"}]}'::jsonb, '{"title":"머무는 순간이\n더 특별해지는 곳.","sub":"좋아하는 것으로 채운 공간은 언제나 좋은 기억이 돼요.","mood":"golden"}'::jsonb),
+('002', false, '2026-09-05', 'Cream Air Camping', '크림 에어텐트로 만든 화사한 봄·가을 거실', 'natural', 'tent-air-cream', '2~3인', '봄', '밝은 에어텐트에 아이보리 체어와 법랑 식기를 맞춘, 사진이 가장 화사하게 나오는 크림 캠핑이에요.', '["크림 캠핑은 “하얗게”가 아니라 “톤을 나누는 것”이 핵심이에요. 텐트가 가장 밝고, 러그가 중간, 우드 소품이 가장 진한 톤이 되도록 맞췄어요.","줄조명은 에어빔 라인을 따라 걸어서 텐트의 곡선이 밤에도 보이게 했어요."]'::jsonb, '["밝은 원단에는 원색 장비가 비쳐 보이니 캔버스 박스로 가리기","전구색 조명 하나로 통일","쿠션 커버만 바꿔도 체어 분위기가 달라져요"]'::jsonb, '[{"product":"p-tent-air-cream","x":24,"y":52},{"product":"p-lantern-string","x":72,"y":28},{"product":"p-lantern-led","x":53,"y":40},{"product":"p-table-low","x":70,"y":66},{"product":"p-kitchen-enamel","x":58,"y":58},{"product":"p-chair-cream","qty":2,"x":86,"y":47},{"product":"p-fabric-cushion","x":82,"y":72},{"product":"p-rug-beige","x":38,"y":88},{"product":"p-storage-box","x":16,"y":80}]'::jsonb, null, '{"title":"밝은 톤으로 채운\n우리만의 작은 거실.","sub":"크림 에어텐트에 톤을 세 단계로 나눠 화사하게 꾸몄어요.","mood":"golden"}'::jsonb),
+('003', false, '2026-08-29', 'Black Minimal Camping', '필요한 것만 남긴 블랙 터널 텐트 세팅', 'black', 'tent-tunnel-black', '2인', '겨울', '블랙 텐트와 알루미늄 가구, 여섯 가지 장비만으로 완성한 미니멀 세팅이에요.', '["장비를 줄일수록 완성도가 올라가는 스타일이라, 이번엔 “이거 없으면 불편한가?”를 기준으로 하나씩 뺐어요.","전부 블랙이면 사진에서 형태가 뭉개져서, 러그만 한 톤 밝은 차콜로 골랐어요."]'::jsonb, '["조명은 낮은 위치에 분산","컬러는 블랙·실버·차콜 3가지 안에서","수납은 일렬로 줄 세우기"]'::jsonb, '[{"product":"p-tent-tunnel-black","x":24,"y":52},{"product":"p-lantern-led","x":53,"y":40},{"product":"p-table-alu","x":70,"y":66},{"product":"p-chair-black","qty":2,"x":86,"y":47},{"product":"p-rug-black","x":38,"y":88},{"product":"p-storage-crate","x":16,"y":80}]'::jsonb, null, null),
+('004', false, '2026-08-22', 'Nordic Small Tent', '2인 소형 돔텐트 앞에 만든 작은 거실', 'white', 'tent-dome-ivory', '2인', '여름', '작은 돔텐트도 낮은 가구와 러그 하나면 충분히 예쁜 거실이 생겨요. 입문 부부에게 추천하는 세팅.', '["작은 텐트는 안을 꾸미기보다 “텐트 앞”을 거실로 쓰는 게 훨씬 효과적이에요.","가구 높이를 전부 무릎 아래로 맞췄더니 텐트와 비율이 맞아서 사진이 안정적으로 나왔어요."]'::jsonb, '["텐트 안은 잠자는 공간으로 비워두기","로우 가구로 비율 맞추기","법랑 식기로 완성도 올리기"]'::jsonb, '[{"product":"p-tent-dome-ivory","x":24,"y":52},{"product":"p-lantern-string","x":72,"y":28},{"product":"p-table-low","x":70,"y":66},{"product":"p-kitchen-enamel","x":58,"y":57},{"product":"p-fabric-tablecloth","x":52,"y":68},{"product":"p-chair-cream","qty":2,"x":86,"y":47},{"product":"p-rug-beige","x":38,"y":88}]'::jsonb, null, null),
+('005', false, '2026-08-15', 'Vintage Lantern Night', '오일 랜턴과 킬림 러그로 채운 밤 캠핑', 'midcentury', 'tent-tc-tipi', '2인', '가을', '패턴은 러그 하나에만, 나머지는 무지로 받쳐서 과하지 않은 빈티지 무드를 만들었어요.', '["빈티지 캠핑은 아이템 하나하나보다 “조명 색온도”가 분위기의 절반이에요. 해가 지면 LED는 끄고 오일 랜턴만 켰어요.","킬림 러그가 강한 만큼 블랭킷과 수납박스는 무지로 골라 균형을 맞췄어요."]'::jsonb, '["패턴은 한 가지 아이템에만","무광·브라스 마감 고르기","텐트 안 화기 사용 시 환기·안전거리 필수"]'::jsonb, '[{"product":"p-tent-tc-tipi","x":24,"y":52},{"product":"p-lantern-oil","x":53,"y":40},{"product":"p-table-roll","x":70,"y":66},{"product":"p-chair-canvas","qty":2,"x":86,"y":47},{"product":"p-fabric-blanket","x":82,"y":72},{"product":"p-rug-kilim","x":38,"y":88},{"product":"p-storage-box","x":16,"y":80}]'::jsonb, null, '{"title":"랜턴 하나로\n완성하는 밤.","sub":"오일 랜턴과 킬림 러그로 채운 빈티지 캠핑의 밤이에요.","mood":"night"}'::jsonb),
+('006', false, '2026-08-08', 'Natural Forest Camping', '숲과 어우러지는 내추럴 톤 가족 캠핑', 'natural', 'tent-air-cream', '3~4인', '여름', '밝은 우드와 카키 체어, 코튼 러그로 주변 숲과 경계 없이 어우러지게 만든 세팅이에요.', '["숲속 사이트라 주변 초록이 이미 충분해서, 장비에는 초록을 거의 쓰지 않고 우드와 오트밀 톤으로 받쳤어요.","오픈 쉘프를 두니 아이들 물건도 정리한 느낌이 나서 좋았어요."]'::jsonb, '["그린은 채도 낮은 컬러로 한두 개만","플라스틱 소품 최소화","쉘프로 “정리된 느낌” 만들기"]'::jsonb, '[{"product":"p-tent-air-cream","x":24,"y":52},{"product":"p-lantern-led","x":53,"y":40},{"product":"p-lantern-shade","x":72,"y":28},{"product":"p-table-roll","x":70,"y":66},{"product":"p-kitchen-wood","x":58,"y":58},{"product":"p-chair-wood-basic","qty":2,"x":86,"y":47},{"product":"p-rug-beige","x":38,"y":88},{"product":"p-storage-shelf","x":16,"y":80}]'::jsonb, null, null)
+on conflict (id) do nothing;
+```
+
+실행한 뒤에는 관리자 계정으로 로그인해서 **관리자 페이지 → 텐트리어 세팅 관리**로 들어가면 6개 샘플이 목록에 보여요. 여기서 "수정하기"로 내용을 실제 세팅으로 바꾸거나, "삭제"로 지우거나, "+ 새 세팅 추가"로 새로 올릴 수 있어요. 등록한 세팅 중 "메인 첫 화면(대문) 슬라이드로 올리기"를 켠 항목은 자동으로 홈페이지 대문 슬라이드에 나타나요.
+
+> `data/setups.js` 파일은 그대로 둬도 괜찮아요 — Supabase 연결 전이거나 등록된 세팅이 하나도 없을 때만 보여주는 기본 샘플이에요. Supabase에 세팅을 하나라도 등록하면 그때부터는 표에 있는 내용이 사이트에 보여요.
+
+---
+
 ## 새로 올라온 텐들이 글, 승인하는 법
 
 사이트에 **관리자 페이지(`admin.html`)** 가 있어서, 관리자로 지정된 계정으로 로그인하면 거기서 바로 승인·반려·댓글 삭제를 할 수 있어요. 헤더의 내 계정 메뉴 → **관리자 페이지**로 들어가면 돼요.

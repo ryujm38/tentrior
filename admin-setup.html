@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>세팅 관리 | TENTRIOR 텐트리어</title>
+  <meta name="description" content="텐트리어 세팅(대문 슬라이드 포함)을 등록·수정·삭제하는 관리자 전용 페이지예요.">
+  <meta name="theme-color" content="#22402F">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="admin-setup">
+  <div id="header"></div>
+
+  <main id="app">
+    <section class="page-head"><div class="container">
+      <div class="breadcrumb"><a href="admin.html">관리자 페이지</a> / 세팅 관리</div>
+      <p class="eyebrow">Admin</p><h1 id="page-title">세팅 추가</h1>
+      <p>사진과 이야기, 사진 속 아이템 정보를 채우면 텐트리어 세팅 목록과 대문 슬라이드에 바로 반영돼요.</p>
+    </div></section>
+
+    <section class="section" style="padding-top:0"><div class="container">
+
+      <div id="gate" class="gate-box" hidden>
+        <p class="eyebrow">로그인이 필요해요</p>
+        <h2>로그인하고 확인하기</h2>
+        <p class="muted" style="margin:0 0 24px">이 페이지는 로그인한 관리자만 볼 수 있어요.</p>
+        <button type="button" class="btn accent" id="gate-login">로그인</button>
+      </div>
+
+      <div id="notready" class="gate-box" hidden>
+        <p class="eyebrow">준비 중</p>
+        <h2>로그인 기능이 아직 준비되지 않았어요</h2>
+        <p class="muted" style="margin:0">운영자 안내: <code>data/supabase-config.js</code> 에 Supabase 값을 채워주세요.</p>
+      </div>
+
+      <div id="noaccess" class="gate-box" hidden>
+        <p class="eyebrow">접근 권한 없음</p>
+        <h2>관리자 권한이 없어요</h2>
+        <p class="muted" style="margin:0">이 계정은 관리자로 지정되어 있지 않아요.</p>
+      </div>
+
+      <form id="setup-form" class="form-card" style="max-width:760px" hidden novalidate>
+        <div class="form-grid">
+
+          <div class="field-group file-drop">
+            <label>대표 사진 (비워두면 기본 일러스트가 보여요)<input type="file" id="setup-image" accept="image/*"></label>
+            <div class="file-preview" id="image-preview">사진을 선택해주세요</div>
+          </div>
+
+          <div class="field-group"><label>제목<input type="text" id="f-title" required maxlength="60" placeholder="예: Warm Wood Camping"></label></div>
+          <div class="field-group"><label>부제목<input type="text" id="f-subtitle" maxlength="80" placeholder="예: 티피텐트를 따뜻한 우드톤으로 채운 가을 2인 캠핑"></label></div>
+
+          <div class="g2">
+            <div class="field-group"><label>스타일<select id="f-style"><option value="">(선택 안 함)</option></select></label></div>
+            <div class="field-group"><label>텐트<select id="f-tent"><option value="">(선택 안 함)</option></select></label></div>
+          </div>
+          <div class="g2">
+            <div class="field-group"><label>계절<select id="f-season">
+              <option value="">(선택 안 함)</option>
+              <option value="봄">봄</option><option value="여름">여름</option><option value="가을">가을</option><option value="겨울">겨울</option>
+            </select></label></div>
+            <div class="field-group"><label>인원<input type="text" id="f-people" placeholder="예: 2인, 3~4인"></label></div>
+          </div>
+          <div class="g2">
+            <div class="field-group"><label>날짜<input type="date" id="f-date"></label></div>
+            <div class="field-group" style="align-self:end;padding-bottom:11px">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="f-featured" style="width:auto"> 대표 세팅으로 보이기</label>
+            </div>
+          </div>
+
+          <div class="field-group"><label>요약<textarea id="f-summary" required maxlength="200" placeholder="목록·상세 페이지 상단에 보이는 한두 문장 요약"></textarea></label></div>
+          <div class="field-group"><label>이야기 (문단 사이는 빈 줄로 구분)<textarea id="f-story" style="min-height:140px" placeholder="첫 번째 문단
+
+두 번째 문단"></textarea></label></div>
+          <div class="field-group"><label>스타일링 팁 (한 줄에 하나씩)<textarea id="f-tips" placeholder="우드 톤은 한 가지 계열로 통일하기
+컬러 포인트는 하나로 충분해요"></textarea></label></div>
+
+          <div class="field-group">
+            <label>사진 속 아이템 (선택 — 제품, 사진 위 위치 x%/y%, 수량)</label>
+            <div class="item-rows" id="item-rows"></div>
+            <button type="button" class="add-row" id="add-item">+ 아이템 추가</button>
+            <details style="margin-top:6px">
+              <summary class="muted small" style="cursor:pointer">제품 목록 보기</summary>
+              <p class="muted small" id="product-ref" style="margin:8px 0 0;line-height:1.7"></p>
+            </details>
+          </div>
+
+          <div class="subsection">
+            <label class="toggle-row"><input type="checkbox" id="f-budget-on" style="width:auto"> 대안 구성(더 저렴한 버전) 보여주기</label>
+            <div id="budget-fields" hidden>
+              <div class="field-group"><label>대안 구성 설명<textarea id="f-budget-note" placeholder="텐트와 러그는 그대로, 가구와 조명을 가성비 제품으로 바꿔 비슷한 분위기를 만들었어요."></textarea></label></div>
+              <div class="field-group">
+                <label>대안 구성 제품 (제품, 수량)</label>
+                <div class="item-rows" id="budget-rows"></div>
+                <button type="button" class="add-row" id="add-budget-item">+ 제품 추가</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="subsection">
+            <label class="toggle-row"><input type="checkbox" id="f-hero-on" style="width:auto"> 메인 첫 화면(대문) 슬라이드로 올리기</label>
+            <div id="hero-fields" hidden>
+              <div class="field-group"><label>대문 제목 (줄바꿈 가능)<textarea id="f-hero-title" placeholder="머무는 순간이
+더 특별해지는 곳."></textarea></label></div>
+              <div class="field-group"><label>대문 부제<input type="text" id="f-hero-sub" maxlength="60" placeholder="좋아하는 것으로 채운 공간은 언제나 좋은 기억이 돼요."></label></div>
+              <div class="field-group"><label>사진 분위기<select id="f-hero-mood">
+                <option value="golden">golden (노을빛)</option>
+                <option value="day">day (낮)</option>
+                <option value="night">night (밤)</option>
+              </select></label></div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button type="submit" class="btn accent" id="submit-btn">저장하기</button>
+            <button type="button" class="btn line" id="delete-btn" hidden>이 세팅 삭제</button>
+          </div>
+          <p class="auth-msg" id="form-msg" aria-live="polite"></p>
+        </div>
+      </form>
+
+    </div></section>
+  </main>
+
+  <div id="footer"></div>
+
+  <script src="data/site.js"></script>
+  <script src="data/styles.js"></script>
+  <script src="data/products.js"></script>
+  <script src="data/tents.js"></script>
+  <script src="data/setups.js"></script>
+  <script src="data/journal.js"></script>
+  <script src="data/tendeuli.js"></script>
+  <script src="data/camperjournal.js"></script>
+  <script src="data/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data/banned-nicknames.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    (function () {
+      function $(sel, el) { return (el || document).querySelector(sel); }
+      function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+      function ready(fn) {
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
+      }
+
+      ready(function () {
+        var T = window.TENTRIOR || {};
+        var editId = new URLSearchParams(location.search).get('id');
+        var loadedRow = null;
+
+        var gate = $('#gate'), notReady = $('#notready'), noAccess = $('#noaccess'), form = $('#setup-form');
+        var checkedFor = null;
+
+        /* ---------- 선택지 채우기 ---------- */
+        var styleSel = $('#f-style');
+        (T.styles || []).forEach(function (st) {
+          var o = document.createElement('option');
+          o.value = st.id; o.textContent = st.name + ' · ' + st.ko;
+          styleSel.appendChild(o);
+        });
+        var tentSel = $('#f-tent');
+        (T.tents || []).forEach(function (t) {
+          var o = document.createElement('option');
+          o.value = t.id; o.textContent = t.name;
+          tentSel.appendChild(o);
+        });
+        var productOptions = (T.products || []).map(function (p) {
+          return { id: p.id, label: '[' + p.category + '] ' + p.name };
+        });
+        $('#product-ref').innerHTML = productOptions.map(function (p) { return esc(p.id) + ' — ' + esc(p.label); }).join('<br>');
+
+        /* ---------- 사진 미리보기 ---------- */
+        var imageInput = $('#setup-image');
+        var imagePreview = $('#image-preview');
+        var imageFile = null;
+        var existingImagePath = '';
+        imageInput.addEventListener('change', function (e) {
+          imageFile = e.target.files[0] || null;
+          if (imageFile) {
+            imagePreview.innerHTML = '<img alt="선택한 사진 미리보기">';
+            imagePreview.querySelector('img').src = URL.createObjectURL(imageFile);
+          } else if (loadedRow && loadedRow.image_path) {
+            showExistingImage();
+          } else {
+            imagePreview.textContent = '사진을 선택해주세요';
+          }
+        });
+        function showExistingImage() {
+          try {
+            var res = T.auth.client.storage.from('setup-images').getPublicUrl(loadedRow.image_path);
+            var url = res.data && res.data.publicUrl;
+            if (url) { imagePreview.innerHTML = '<img alt="현재 사진">'; imagePreview.querySelector('img').src = url; return; }
+          } catch (e) { /* 무시 */ }
+          imagePreview.textContent = '사진을 선택해주세요';
+        }
+
+        /* ---------- 아이템 행 (사진 속 제품) ---------- */
+        var itemRows = $('#item-rows');
+        function addItemRow(item) {
+          item = item || {};
+          var row = document.createElement('div');
+          row.className = 'setup-item-row';
+          var opts = '<option value="">(제품 선택)</option>' + productOptions.map(function (p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === item.product ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+          }).join('');
+          row.innerHTML =
+            '<select class="si-product">' + opts + '</select>' +
+            '<input type="number" class="si-x" placeholder="x%" min="0" max="100" value="' + (item.x != null ? item.x : '') + '">' +
+            '<input type="number" class="si-y" placeholder="y%" min="0" max="100" value="' + (item.y != null ? item.y : '') + '">' +
+            '<input type="number" class="si-qty" placeholder="수량" min="1" value="' + (item.qty || '') + '">' +
+            '<button type="button" class="remove-row" aria-label="이 아이템 삭제">×</button>';
+          row.querySelector('.remove-row').addEventListener('click', function () { row.remove(); });
+          itemRows.appendChild(row);
+        }
+        $('#add-item').addEventListener('click', function () { addItemRow(); });
+
+        /* ---------- 대안 구성 아이템 행 ---------- */
+        var budgetOn = $('#f-budget-on'), budgetFields = $('#budget-fields'), budgetRows = $('#budget-rows');
+        budgetOn.addEventListener('change', function () { budgetFields.hidden = !budgetOn.checked; });
+        function addBudgetRow(item) {
+          item = item || {};
+          var row = document.createElement('div');
+          row.className = 'item-row';
+          var opts = '<option value="">(제품 선택)</option>' + productOptions.map(function (p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === item.product ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+          }).join('');
+          row.innerHTML =
+            '<select class="bi-product">' + opts + '</select>' +
+            '<input type="number" class="bi-qty" placeholder="수량" min="1" value="' + (item.qty || '') + '">' +
+            '<button type="button" class="remove-row" aria-label="이 제품 삭제">×</button>';
+          row.querySelector('.remove-row').addEventListener('click', function () { row.remove(); });
+          budgetRows.appendChild(row);
+        }
+        $('#add-budget-item').addEventListener('click', function () { addBudgetRow(); });
+
+        /* ---------- 대문 슬라이드 ---------- */
+        var heroOn = $('#f-hero-on'), heroFields = $('#hero-fields');
+        heroOn.addEventListener('change', function () { heroFields.hidden = !heroOn.checked; });
+
+        /* ---------- 기존 값 채우기 (수정 모드) ---------- */
+        function fillForm(row) {
+          loadedRow = row;
+          $('#page-title').textContent = '세팅 수정';
+          document.title = '세팅 수정 | TENTRIOR 텐트리어';
+          $('#f-title').value = row.title || '';
+          $('#f-subtitle').value = row.subtitle || '';
+          styleSel.value = row.style || '';
+          tentSel.value = row.tent || '';
+          $('#f-season').value = row.season || '';
+          $('#f-people').value = row.people || '';
+          $('#f-date').value = row.setup_date || '';
+          $('#f-featured').checked = !!row.featured;
+          $('#f-summary').value = row.summary || '';
+          $('#f-story').value = (row.story || []).join('\n\n');
+          $('#f-tips').value = (row.tips || []).join('\n');
+          (row.items || []).forEach(addItemRow);
+          if (row.budget) {
+            budgetOn.checked = true; budgetFields.hidden = false;
+            $('#f-budget-note').value = row.budget.note || '';
+            (row.budget.items || []).forEach(addBudgetRow);
+          }
+          if (row.hero) {
+            heroOn.checked = true; heroFields.hidden = false;
+            $('#f-hero-title').value = row.hero.title || '';
+            $('#f-hero-sub').value = row.hero.sub || '';
+            $('#f-hero-mood').value = row.hero.mood || 'golden';
+          }
+          if (row.image_path) { existingImagePath = row.image_path; showExistingImage(); }
+          $('#delete-btn').hidden = false;
+        }
+
+        /* ---------- 로그인·권한 상태에 따라 화면 전환 ---------- */
+        function showState() {
+          var auth = T.auth;
+          [gate, notReady, noAccess, form].forEach(function (el) { el.hidden = true; });
+          if (!auth || !auth.ready) { notReady.hidden = false; return; }
+          if (!auth.user) { gate.hidden = false; return; }
+          if (!auth.isAdmin) { noAccess.hidden = false; return; }
+          form.hidden = false;
+          if (checkedFor === auth.user.id) return;
+          checkedFor = auth.user.id;
+          if (!editId) { addItemRow(); addItemRow(); addItemRow(); return; }
+          T.auth.client.from('setups').select('*').eq('id', editId).single().then(function (res) {
+            if (res.error || !res.data) { $('#form-msg').textContent = '세팅을 찾을 수 없어요.'; return; }
+            fillForm(res.data);
+          });
+        }
+        showState();
+        document.addEventListener('tentrior:auth', showState);
+
+        var gateBtn = $('#gate-login');
+        if (gateBtn) gateBtn.addEventListener('click', function () { T.auth.openModal('signin'); });
+
+        /* ---------- 저장 ---------- */
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var auth = T.auth;
+          if (!auth || !auth.isAdmin) return;
+
+          var msg = $('#form-msg'), btn = $('#submit-btn');
+          msg.textContent = '';
+
+          var title = $('#f-title').value.trim();
+          var summary = $('#f-summary').value.trim();
+          if (!title || !summary) { msg.textContent = '제목과 요약은 필수예요.'; return; }
+
+          var items = Array.prototype.slice.call(itemRows.querySelectorAll('.setup-item-row')).map(function (row) {
+            var product = row.querySelector('.si-product').value;
+            if (!product) return null;
+            var out = { product: product };
+            var x = row.querySelector('.si-x').value, y = row.querySelector('.si-y').value, qty = row.querySelector('.si-qty').value;
+            if (x !== '') out.x = Number(x);
+            if (y !== '') out.y = Number(y);
+            if (qty && Number(qty) > 1) out.qty = Number(qty);
+            return out;
+          }).filter(Boolean);
+
+          var budget = null;
+          if (budgetOn.checked) {
+            var bItems = Array.prototype.slice.call(budgetRows.querySelectorAll('.item-row')).map(function (row) {
+              var product = row.querySelector('.bi-product').value;
+              if (!product) return null;
+              var out = { product: product };
+              var qty = row.querySelector('.bi-qty').value;
+              if (qty && Number(qty) > 1) out.qty = Number(qty);
+              return out;
+            }).filter(Boolean);
+            budget = { note: $('#f-budget-note').value.trim(), items: bItems };
+          }
+
+          var hero = null;
+          if (heroOn.checked) {
+            hero = {
+              title: $('#f-hero-title').value.trim() || title,
+              sub: $('#f-hero-sub').value.trim(),
+              mood: $('#f-hero-mood').value
+            };
+          }
+
+          var payload = {
+            title: title,
+            subtitle: $('#f-subtitle').value.trim(),
+            style: styleSel.value,
+            tent: tentSel.value,
+            season: $('#f-season').value,
+            people: $('#f-people').value.trim(),
+            setup_date: $('#f-date').value || new Date().toISOString().slice(0, 10),
+            featured: $('#f-featured').checked,
+            summary: summary,
+            story: $('#f-story').value.split(/\n\s*\n/).map(function (s) { return s.trim(); }).filter(Boolean),
+            tips: $('#f-tips').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
+            items: items,
+            budget: budget,
+            hero: hero
+          };
+
+          btn.disabled = true;
+
+          function saveWithImagePath(imagePath) {
+            if (imagePath !== undefined) payload.image_path = imagePath;
+            var query = editId
+              ? T.auth.client.from('setups').update(payload).eq('id', editId)
+              : T.auth.client.from('setups').insert(payload);
+            query.then(function (res) {
+              if (res.error) throw res.error;
+              location.href = 'admin.html';
+            }).catch(function (err) {
+              msg.textContent = (err && err.message) || '저장 중 문제가 발생했어요.';
+              btn.disabled = false;
+            });
+          }
+
+          if (imageFile) {
+            var ext = (imageFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+            var path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+            T.auth.client.storage.from('setup-images').upload(path, imageFile, { upsert: false }).then(function (up) {
+              if (up.error) throw up.error;
+              saveWithImagePath(path);
+            }).catch(function (err) {
+              msg.textContent = (err && err.message) || '사진 업로드에 실패했어요.';
+              btn.disabled = false;
+            });
+          } else {
+            saveWithImagePath(existingImagePath || undefined);
+          }
+        });
+
+        /* ---------- 삭제 ---------- */
+        $('#delete-btn').addEventListener('click', function () {
+          if (!editId || !confirm('이 세팅을 삭제할까요? 대문 슬라이드에 쓰이고 있다면 함께 사라져요.')) return;
+          T.auth.client.from('setups').delete().eq('id', editId).then(function (res) {
+            if (res.error) { $('#form-msg').textContent = res.error.message; return; }
+            location.href = 'admin.html';
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

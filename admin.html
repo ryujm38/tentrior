@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>관리자 페이지 | TENTRIOR 텐트리어</title>
-  <meta name="description" content="텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 위한 관리자 전용 페이지예요.">
+  <meta name="description" content="텐트리어 세팅(대문 슬라이드), 텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 위한 관리자 전용 페이지예요.">
   <meta name="theme-color" content="#22402F">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
     <section class="page-head"><div class="container">
       <div class="breadcrumb">관리자 페이지</div>
       <p class="eyebrow">Admin</p><h1>관리자 페이지</h1>
-      <p>텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 여기서 바로 할 수 있어요.</p>
+      <p>텐트리어 세팅(대문 슬라이드), 텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 여기서 바로 할 수 있어요.</p>
     </div></section>
 
     <section class="section" style="padding-top:0"><div class="container">
@@ -47,7 +47,14 @@
       </div>
 
       <div id="content" hidden>
-        <h2 style="margin-top:0">승인 대기 중인 텐들이</h2>
+        <div class="admin-post-head" style="margin-top:0">
+          <h2 style="margin:0">텐트리어 세팅 관리 (대문 슬라이드 포함)</h2>
+          <a class="btn accent" href="admin-setup.html">+ 새 세팅 추가</a>
+        </div>
+        <p class="muted" style="margin-top:-4px">여기서 추가·수정한 세팅이 목록 페이지와 메인 대문 슬라이드에 그대로 반영돼요.</p>
+        <ul class="my-post-list" id="admin-setups"></ul>
+
+        <h2 style="margin-top:56px">승인 대기 중인 텐들이</h2>
         <ul class="my-post-list" id="admin-posts"></ul>
 
         <h2 style="margin-top:56px">광고 배너 관리</h2>
@@ -106,13 +113,51 @@
           if (!auth.user) { gate.hidden = false; return; }
           if (!auth.isAdmin) { noAccess.hidden = false; return; }
           content.hidden = false;
-          if (loadedFor !== auth.user.id) { loadedFor = auth.user.id; loadPendingPosts(); loadAllComments(); loadAds(); }
+          if (loadedFor !== auth.user.id) { loadedFor = auth.user.id; loadSetups(); loadPendingPosts(); loadAllComments(); loadAds(); }
         }
         showState();
         document.addEventListener('tentrior:auth', showState);
 
         var gateBtn = $('#gate-login');
         if (gateBtn) gateBtn.addEventListener('click', function () { T.auth.openModal('signin'); });
+
+        /* ---------- 텐트리어 세팅 관리 ---------- */
+        var setupsListEl = $('#admin-setups');
+
+        function loadSetups() {
+          setupsListEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          T.auth.client.from('setups').select('id,title,setup_date,featured,hero').order('setup_date', { ascending: false })
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                setupsListEl.innerHTML = '<p class="muted">등록된 세팅이 없어요.</p>';
+                return;
+              }
+              setupsListEl.innerHTML = data.map(function (row) {
+                var badges = (row.featured ? '대표 · ' : '') + (row.hero ? '대문 슬라이드 · ' : '');
+                return '<li class="admin-post-card" data-id="' + esc(row.id) + '">' +
+                  '<div class="admin-post-head"><strong>' + esc(row.title) + '</strong>' +
+                  '<span class="muted small">' + esc(badges) + esc((row.setup_date || '').slice(0, 10)) + '</span></div>' +
+                  '<div class="admin-post-actions">' +
+                    '<a href="admin-setup.html?id=' + encodeURIComponent(row.id) + '">수정하기</a>' +
+                    '<a href="setup.html?id=' + encodeURIComponent(row.id) + '" target="_blank" rel="noopener">미리보기 ↗</a>' +
+                    '<button type="button" class="btn line setup-delete-btn">삭제</button>' +
+                  '</div>' +
+                '</li>';
+              }).join('');
+            });
+        }
+
+        setupsListEl.addEventListener('click', function (e) {
+          var btn = e.target.closest('.setup-delete-btn');
+          if (!btn) return;
+          var card = e.target.closest('.admin-post-card');
+          var id = card && card.dataset.id;
+          if (!id || !confirm('이 세팅을 삭제할까요? 대문 슬라이드에 쓰이고 있다면 함께 사라져요.')) return;
+          btn.disabled = true;
+          T.auth.client.from('setups').delete().eq('id', id)
+            .then(function (res) { if (!res.error) loadSetups(); });
+        });
 
         /* ---------- 텐들이 승인/반려 ---------- */
         function loadPendingPosts() {

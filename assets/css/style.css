@@ -550,4 +550,10 @@ a:hover .arr, button:hover .arr { transform: translateX(4px); }
 .file-preview img { width: 100%; height: 100%; object-fit: cover; }
 .consent-row { display: flex; gap: 10px; align-items: flex-start; font-size: .84rem; color: var(--ink-2); }
 .consent-row input { margin-top: 3px; }
+
+.setup-item-row { display: grid; grid-template-columns: 2fr 64px 64px 64px auto; gap: 8px; align-items: center; }
+.setup-item-row select, .setup-item-row input { font: inherit; font-size: .86rem; padding: 9px 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 2px; width: 100%; }
+@media (max-width: 640px) { .setup-item-row { grid-template-columns: 1fr 1fr; } }
+.toggle-row { display: flex; align-items: center; gap: 10px; font-size: .86rem; font-weight: 600; color: var(--ink-2); margin-bottom: 4px; }
+.subsection { padding: 16px; border: 1px solid var(--line); background: var(--stone); display: grid; gap: 14px; }
 .gate-box { max-width: 480px; margin: 0 auto; text-align: center; padding: 48px 28px; background: var(--paper); border: 1px solid var(--line); }

@@ -4,7 +4,7 @@
    - data/*.js 의 데이터를 읽어 페이지별 화면을 그립니다.
    - 콘텐츠 추가·수정은 이 파일이 아니라 data 폴더에서 하세요.
    ============================================================ */
-(function () {
+(async function () {
   'use strict';
 
   const T = window.TENTRIOR || {};
@@ -15,6 +15,37 @@
   const ROOT = document.body.dataset.root || '';
   const app = document.getElementById('app');
   const BRAND = `${S.name || 'TENTRIOR'} ${S.nameKo || '텐트리어'}`;
+
+  /* ---------- 세팅(setups) — 관리자가 Supabase에 등록한 데이터로 교체 ---------- */
+  // 세팅 데이터가 필요한 페이지에서만 미리 요청을 보내두고, 라우팅 직전에 기다려요.
+  // Supabase가 준비 안 됐거나 등록된 세팅이 없으면 data/setups.js 샘플을 그대로 써요.
+  const SETUPS_PAGES = ['home', 'look', 'setup', 'style', 'guide', 'weekend', 'camperjournal'];
+  function mapDbSetup(row) {
+    let image = '';
+    if (row.image_path) {
+      try {
+        const { data } = window.TENTRIOR.auth.client.storage.from('setup-images').getPublicUrl(row.image_path);
+        image = (data && data.publicUrl) || '';
+      } catch (e) { /* 스토리지 버킷이 아직 없으면 무시 */ }
+    }
+    return {
+      id: row.id, featured: !!row.featured, date: row.setup_date || (row.created_at || '').slice(0, 10),
+      title: row.title, subtitle: row.subtitle || '', style: row.style || '', tent: row.tent || '',
+      people: row.people || '', season: row.season || '', image,
+      summary: row.summary || '', story: row.story || [], tips: row.tips || [],
+      items: row.items || [], budget: row.budget || null, hero: row.hero || null
+    };
+  }
+  async function fetchDbSetups() {
+    const auth = window.TENTRIOR.auth;
+    if (!auth || !auth.ready) return null;
+    try {
+      const { data, error } = await auth.client.from('setups').select('*');
+      if (error || !data || !data.length) return null;
+      return data.map(mapDbSetup);
+    } catch (e) { return null; }
+  }
+  const setupsPromise = SETUPS_PAGES.indexOf(PAGE) !== -1 ? fetchDbSetups() : null;
 
   /* ---------- helpers ---------- */
   const $ = (sel, el = document) => el.querySelector(sel);
@@ -1493,6 +1524,10 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
 
   /* ---------- INIT ---------- */
   renderHeader();
+  if (setupsPromise) {
+    const dbSetups = await setupsPromise;
+    if (dbSetups) T.setups = dbSetups;
+  }
   const pages = { home: pageHome, look: pageLook, setup: pageSetup, style: pageStyle, guide: pageGuide, pick: pagePick, tendeuli: pageTendeuli, camperjournal: pageCamperJournal, weekend: pageJournal };
   if (app && pages[PAGE]) pages[PAGE]();
   renderFooter();
