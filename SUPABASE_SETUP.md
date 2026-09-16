@@ -33,6 +33,7 @@
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nickname text not null default '캠퍼',
+  is_admin boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -49,6 +50,22 @@ create policy "본인 프로필만 등록 가능"
 create policy "본인 프로필만 수정 가능"
   on public.profiles for update
   using (auth.uid() = id);
+
+-- 본인 프로필은 수정할 수 있어도, is_admin 값은 대시보드(관리자 SQL)로만 바꿀 수 있게 막아요.
+-- (이게 없으면 로그인한 사람이 스스로 관리자 권한을 줄 수 있는 보안 구멍이 생겨요.)
+create function public.protect_is_admin()
+returns trigger as $$
+begin
+  if new.is_admin is distinct from old.is_admin and auth.role() <> 'service_role' then
+    new.is_admin := old.is_admin;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger protect_profiles_is_admin
+  before update on public.profiles
+  for each row execute procedure public.protect_is_admin();
 
 -- 회원가입하면 자동으로 프로필 한 줄이 만들어지도록
 create function public.handle_new_user()
@@ -133,6 +150,26 @@ create policy "내 댓글은 내가 삭제 가능"
 
 **Run** 버튼을 눌러 실행하세요. "Success. No rows returned" 메시지가 뜨면 성공이에요.
 
+> **이미 이 SQL을 예전에 한 번 실행하셨다면** (표가 이미 있어서 위 SQL이 에러가 난다면), 아래 보정 SQL만 추가로 실행해주세요. `is_admin` 컬럼과 보안 트리거를 뒤늦게 추가하는 코드예요.
+> ```sql
+> alter table public.profiles add column if not exists is_admin boolean not null default false;
+>
+> create or replace function public.protect_is_admin()
+> returns trigger as $$
+> begin
+>   if new.is_admin is distinct from old.is_admin and auth.role() <> 'service_role' then
+>     new.is_admin := old.is_admin;
+>   end if;
+>   return new;
+> end;
+> $$ language plpgsql security definer;
+>
+> drop trigger if exists protect_profiles_is_admin on public.profiles;
+> create trigger protect_profiles_is_admin
+>   before update on public.profiles
+>   for each row execute procedure public.protect_is_admin();
+> ```
+
 ---
 
 ## 3단계 — 사진 저장 공간(Storage) 만들기
@@ -183,6 +220,71 @@ window.TENTRIOR_SUPABASE = {
 
 - Supabase 왼쪽 메뉴 **Authentication** → **Email Templates** 에서 문구를 한글로 수정할 수 있어요.
 - **Authentication** → **URL Configuration** 에서 **Site URL** 을 실제 사이트 주소로 넣어두면, 이메일 속 링크가 로컬 주소가 아니라 실제 사이트로 연결돼요. (아직 도메인이 없다면 나중에 도메인을 연결한 뒤 이 값을 채워도 돼요.)
+
+---
+
+## 6단계 — 광고 배너 관리 연결하기
+
+관리자 페이지에서 홈페이지에 보여줄 광고 배너(이미지 + 연결 링크)를 직접 올리고 지우려면, 표 1개와 저장 공간 1개를 더 만들어야 해요. **SQL Editor** → **New query** 에서 아래를 실행하세요.
+
+```sql
+-- 광고 배너 표
+create table public.ads (
+  id uuid primary key default gen_random_uuid(),
+  title text,
+  link_url text,
+  image_path text not null,
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.ads enable row level security;
+
+create policy "노출 중인 광고는 누구나 볼 수 있음"
+  on public.ads for select
+  using (active = true);
+
+create policy "관리자는 모든 광고를 볼 수 있음"
+  on public.ads for select
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 광고를 등록 가능"
+  on public.ads for insert
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 광고를 수정 가능"
+  on public.ads for update
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 광고를 삭제 가능"
+  on public.ads for delete
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+```
+
+그다음 **Storage** → **New bucket** 으로 이미지 저장 공간을 만드세요.
+
+1. 이름: `ad-images`
+2. **Public bucket** 체크박스 **켜기**
+3. **Create bucket**
+
+다시 **SQL Editor** 에서 접근 규칙을 추가하세요.
+
+```sql
+create policy "광고 이미지는 누구나 볼 수 있음"
+  on storage.objects for select
+  using (bucket_id = 'ad-images');
+
+create policy "관리자만 광고 이미지를 올릴 수 있음"
+  on storage.objects for insert
+  with check (bucket_id = 'ad-images' and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+
+create policy "관리자만 광고 이미지를 지울 수 있음"
+  on storage.objects for delete
+  using (bucket_id = 'ad-images' and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin));
+```
+
+이제 관리자 계정으로 로그인해서 **관리자 페이지 → 광고 배너 관리**로 들어가면, 이미지와 연결 링크를 올려서 바로 등록할 수 있어요. 등록한 광고는 홈페이지에 자동으로 나타나고, "숨기기"나 "삭제"로 언제든 뺄 수 있어요.
 
 ---
 

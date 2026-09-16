@@ -96,15 +96,17 @@
   /* ---------- 로그인/회원가입 모달 ---------- */
   function ensureModal() {
     if (document.querySelector('.auth-layer')) return;
+    // 관리자 페이지는 회원가입을 막고 로그인만 할 수 있게 해요.
+    const isAdminPage = document.body.getAttribute('data-page') === 'admin';
     const layer = document.createElement('div');
     layer.className = 'auth-layer';
     layer.hidden = true;
     layer.innerHTML = `
-      <div class="auth-panel" role="dialog" aria-modal="true" aria-label="로그인 · 회원가입">
+      <div class="auth-panel" role="dialog" aria-modal="true" aria-label="${isAdminPage ? '관리자 로그인' : '로그인 · 회원가입'}">
         <button type="button" class="icon-btn auth-close" aria-label="닫기">${ICON.close}</button>
         <div class="auth-tabs">
           <button type="button" class="auth-tab active" data-tab="signin">로그인</button>
-          <button type="button" class="auth-tab" data-tab="signup">회원가입</button>
+          <button type="button" class="auth-tab" data-tab="signup"${isAdminPage ? ' hidden' : ''}>회원가입</button>
         </div>
 
         <form class="signin-form" novalidate>
@@ -169,6 +171,7 @@
     const forgotBtn = signinForm.querySelector('.auth-forgot');
 
     function setMode(mode) {
+      if (isAdminPage) mode = 'signin';
       tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === mode));
       signinForm.hidden = mode !== 'signin';
       signupForm.hidden = mode !== 'signup';

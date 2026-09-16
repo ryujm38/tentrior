@@ -682,6 +682,7 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
 
   /* ---------- HOME ---------- */
   function pageHome() {
+    const auth = window.TENTRIOR.auth || { ready: false };
     const setups = T.setups.slice().sort(byDateDesc);
     if (!setups.length) return notFound('아직 등록된 세팅이 없어요.', 'about.html', '텐트리어 소개 보기');
     let slides = setups.filter((s) => s.hero).slice(0, 5);
@@ -764,6 +765,8 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
       </a>
     </section>
 
+    <div id="ad-banners-slot"></div>
+
     ${latest ? `
     <section class="section"><div class="container">
       <div class="section-head"><div><p class="eyebrow">Tentrior Weekend</p><h2>이번 주 우리는 여기에서 머물렀어요</h2></div><a class="link-more" href="weekend.html">Weekend ${ICON.arrow}</a></div>
@@ -776,6 +779,10 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
     bindBestPicks();
     bindShoppable($('#shop-the-look'), look);
     bindNewsletter();
+    if (auth.ready) fetchActiveAds().then((ads) => {
+      const slot = $('#ad-banners-slot', app);
+      if (slot && ads.length) slot.outerHTML = adBannersHTML(ads);
+    });
   }
 
   function bindBestPicks() {
@@ -1329,6 +1336,42 @@ ${bulbs.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="18
     });
 
     load();
+  }
+
+  /* ---------- 광고 배너 (관리자 등록) ---------- */
+  // 관리자 페이지에서 올린 광고(ads 테이블)를 불러와요. Supabase가 준비 안 됐거나
+  // 등록된 광고가 없으면 조용히 아무것도 표시하지 않아요.
+  async function fetchActiveAds() {
+    const auth = window.TENTRIOR.auth;
+    if (!auth || !auth.ready) return [];
+    try {
+      const { data, error } = await auth.client.from('ads').select('*')
+        .eq('active', true).order('sort_order', { ascending: true });
+      if (error || !data) return [];
+      return data.map((row) => {
+        let image = '';
+        try {
+          const { data: pub } = auth.client.storage.from('ad-images').getPublicUrl(row.image_path);
+          image = (pub && pub.publicUrl) || '';
+        } catch (e) { /* 스토리지 버킷이 아직 없으면 무시 */ }
+        return { id: row.id, title: row.title || '', linkUrl: row.link_url || '#', image };
+      }).filter((ad) => ad.image);
+    } catch (e) { return []; }
+  }
+
+  function adBannersHTML(ads) {
+    if (!ads.length) return '';
+    return `
+    <section class="section ad-banners"><div class="container">
+      <div class="ad-row">
+        ${ads.map((ad) => `
+        <a class="ad-card" href="${esc(ad.linkUrl)}" target="_blank" rel="noopener sponsored">
+          <img src="${esc(ad.image)}" alt="${esc(ad.title)}" loading="lazy">
+          <span class="ad-label">AD</span>
+          ${ad.title ? `<span class="ad-title">${esc(ad.title)}</span>` : ''}
+        </a>`).join('')}
+      </div>
+    </div></section>`;
   }
 
   /* ---------- 캠퍼저널 (팁 · 정보 콘텐츠) ---------- */

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>관리자 페이지 | TENTRIOR 텐트리어</title>
-  <meta name="description" content="텐들이 승인·반려, 댓글 관리를 위한 관리자 전용 페이지예요.">
+  <meta name="description" content="텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 위한 관리자 전용 페이지예요.">
   <meta name="theme-color" content="#22402F">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2322402F'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23F7F3EB'%3ET%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
     <section class="page-head"><div class="container">
       <div class="breadcrumb">관리자 페이지</div>
       <p class="eyebrow">Admin</p><h1>관리자 페이지</h1>
-      <p>텐들이 승인·반려와 댓글 관리를 여기서 바로 할 수 있어요.</p>
+      <p>텐들이 승인·반려, 광고 배너 관리, 댓글 관리를 여기서 바로 할 수 있어요.</p>
     </div></section>
 
     <section class="section" style="padding-top:0"><div class="container">
@@ -49,6 +49,18 @@
       <div id="content" hidden>
         <h2 style="margin-top:0">승인 대기 중인 텐들이</h2>
         <ul class="my-post-list" id="admin-posts"></ul>
+
+        <h2 style="margin-top:56px">광고 배너 관리</h2>
+        <p class="muted" style="margin-top:-12px">홈페이지에 노출할 광고 이미지를 올리고, 숨기거나 삭제할 수 있어요.</p>
+        <form id="ad-form" class="field-group" style="max-width:480px;margin:20px 0 28px">
+          <label>광고 이미지<input type="file" id="ad-image" accept="image/*" required></label>
+          <label>연결 링크 (클릭하면 이동할 주소)<input type="url" id="ad-link" placeholder="https://" required></label>
+          <label>제목 (선택, 사진 위에 작게 표시돼요)<input type="text" id="ad-title" maxlength="40"></label>
+          <label>노출 순서 (숫자가 작을수록 먼저 보여요)<input type="number" id="ad-order" value="0" min="0"></label>
+          <button type="submit" class="btn accent" id="ad-submit">광고 등록</button>
+          <p class="field-msg" id="ad-msg" aria-live="polite"></p>
+        </form>
+        <ul class="my-post-list" id="admin-ads"></ul>
 
         <h2 style="margin-top:56px">전체 댓글 관리</h2>
         <ul class="comment-list" id="admin-comments"></ul>
@@ -94,7 +106,7 @@
           if (!auth.user) { gate.hidden = false; return; }
           if (!auth.isAdmin) { noAccess.hidden = false; return; }
           content.hidden = false;
-          if (loadedFor !== auth.user.id) { loadedFor = auth.user.id; loadPendingPosts(); loadAllComments(); }
+          if (loadedFor !== auth.user.id) { loadedFor = auth.user.id; loadPendingPosts(); loadAllComments(); loadAds(); }
         }
         showState();
         document.addEventListener('tentrior:auth', showState);
@@ -141,6 +153,94 @@
           (approveBtn || rejectBtn).disabled = true;
           T.auth.client.from('tendeuli_posts').update({ status: newStatus }).eq('id', id)
             .then(function (res) { if (!res.error) loadPendingPosts(); });
+        });
+
+        /* ---------- 광고 배너 관리 ---------- */
+        var adForm = $('#ad-form'), adImageInput = $('#ad-image'), adLinkInput = $('#ad-link'),
+          adTitleInput = $('#ad-title'), adOrderInput = $('#ad-order'), adSubmitBtn = $('#ad-submit'), adMsg = $('#ad-msg');
+        var adsListEl = $('#admin-ads');
+
+        function adImageUrl(path) {
+          try {
+            var res = T.auth.client.storage.from('ad-images').getPublicUrl(path);
+            return (res.data && res.data.publicUrl) || '';
+          } catch (e) { return ''; }
+        }
+
+        function loadAds() {
+          adsListEl.innerHTML = '<p class="muted">불러오는 중이에요…</p>';
+          T.auth.client.from('ads').select('*').order('sort_order', { ascending: true })
+            .then(function (res) {
+              var data = res.data;
+              if (res.error || !data || !data.length) {
+                adsListEl.innerHTML = '<p class="muted">등록된 광고가 없어요.</p>';
+                return;
+              }
+              adsListEl.innerHTML = data.map(function (row) {
+                var img = adImageUrl(row.image_path);
+                return '<li class="admin-post-card" data-id="' + esc(row.id) + '">' +
+                  '<div class="admin-post-head"><strong>' + esc(row.title || '(제목 없음)') + '</strong>' +
+                  '<span class="muted small">순서 ' + esc(row.sort_order) + ' · ' + (row.active ? '노출 중' : '숨김') + '</span></div>' +
+                  (img ? '<img src="' + esc(img) + '" alt="" style="width:180px;max-width:100%;aspect-ratio:16/6;object-fit:cover;display:block;margin:8px 0">' : '') +
+                  '<p class="muted" style="margin:0;word-break:break-all">' + esc(row.link_url) + '</p>' +
+                  '<div class="admin-post-actions">' +
+                    '<button type="button" class="btn line ad-toggle-btn">' + (row.active ? '숨기기' : '다시 노출') + '</button>' +
+                    '<button type="button" class="btn line ad-delete-btn">삭제</button>' +
+                  '</div>' +
+                '</li>';
+              }).join('');
+            });
+        }
+
+        adsListEl.addEventListener('click', function (e) {
+          var toggleBtn = e.target.closest('.ad-toggle-btn');
+          var deleteBtn = e.target.closest('.ad-delete-btn');
+          if (!toggleBtn && !deleteBtn) return;
+          var card = e.target.closest('.admin-post-card');
+          var id = card && card.dataset.id;
+          if (!id) return;
+
+          if (toggleBtn) {
+            toggleBtn.disabled = true;
+            T.auth.client.from('ads').select('active').eq('id', id).single().then(function (res) {
+              var next = !(res.data && res.data.active);
+              return T.auth.client.from('ads').update({ active: next }).eq('id', id);
+            }).then(function () { loadAds(); });
+            return;
+          }
+
+          if (deleteBtn) {
+            if (!confirm('이 광고를 삭제할까요?')) return;
+            deleteBtn.disabled = true;
+            T.auth.client.from('ads').delete().eq('id', id).then(function (res) { if (!res.error) loadAds(); });
+          }
+        });
+
+        adForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          adMsg.textContent = '';
+          var file = adImageInput.files[0];
+          var link = adLinkInput.value.trim();
+          if (!file || !link) { adMsg.textContent = '이미지와 연결 링크는 필수예요.'; return; }
+          adSubmitBtn.disabled = true;
+          var ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+          var path = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+          T.auth.client.storage.from('ad-images').upload(path, file, { upsert: false })
+            .then(function (up) {
+              if (up.error) throw up.error;
+              return T.auth.client.from('ads').insert({
+                title: adTitleInput.value.trim(), link_url: link, image_path: path,
+                sort_order: Number(adOrderInput.value) || 0, active: true
+              });
+            })
+            .then(function (ins) {
+              if (ins.error) throw ins.error;
+              adForm.reset();
+              adOrderInput.value = 0;
+              loadAds();
+            })
+            .catch(function (err) { adMsg.textContent = (err && err.message) || '등록 중 문제가 발생했어요.'; })
+            .finally(function () { adSubmitBtn.disabled = false; });
         });
 
         /* ---------- 댓글 관리 ---------- */
