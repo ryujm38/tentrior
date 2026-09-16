@@ -179,7 +179,7 @@ powershell -ExecutionPolicy Bypass -File serve.ps1
 - [ ] 제휴 프로그램별 **필수 고지 문구** 확인 후 `disclosure` 수정
       (쿠팡 파트너스·네이버 쇼핑 커넥트 각 가이드 + 공정위 추천·보증 심사지침)
 - [ ] 협찬받은 제품이 들어간 세팅은 제목이나 요약에 `[협찬]` 표시
-- [ ] `data/site.js` 의 `sampleNotice: false` 로 샘플 안내 띠 끄기
+- [x] `data/site.js` 의 `sampleNotice: false` 로 샘플 안내 띠 끄기
 - [ ] `about.html` 의 TODO 자리에 두 분 사진·소개 넣기
 - [ ] `tent.html`, `journal.html`, `shop.html`(예전 주소 리다이렉트 파일) 삭제 여부 결정 — 남겨둬도 무해해요
 - [ ] 휴대폰으로 모든 페이지 확인

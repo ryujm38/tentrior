@@ -33,7 +33,7 @@ TENTRIOR.site = {
   newsletterUrl: '',      // TODO: 스티비 등 뉴스레터 구독 페이지 주소
 
   // 사진·제품이 샘플일 때 상단에 안내 띠를 보여줍니다. 실제 콘텐츠로 바꾸면 false 로.
-  sampleNotice: true,
+  sampleNotice: false,
 
   // 제휴 링크 고지 문구 (추천·보증 표시). 각 제휴 프로그램의 필수 문구를 확인해 맞춰주세요.
   disclosure:
